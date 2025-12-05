@@ -168,7 +168,7 @@ function parsePolicy1Data(text) {
   return rows;
 }
 
-// --- Policy Data 2 Parser ---
+// --- Policy Data 2 Parser (with comma-separated backup resources) ---
 function parsePolicy2Data(text) {
   const lines = text.trim().split(/\r?\n+/).map(v => v.trim()).filter(Boolean);
   if (lines.length === 0) return [];
@@ -176,19 +176,21 @@ function parsePolicy2Data(text) {
   const rows = [headers];
   let startIndex = 0;
   if (/share|primary|backup/i.test(lines[0])) startIndex = 1;
+
   for (let i = startIndex; i < lines.length; i++) {
     const parts = lines[i].split(/\t| +/).filter(Boolean);
     if (parts.length < 3) continue;
+
     let share = parts[0];
     if (/^\d+(\.\d+)?$/.test(share) && !share.endsWith('%')) share += '%';
+
     const primary = parts[1];
-    const backups = parts
-      .slice(2)
-      .join(" ")
-      .replace(/(Live)(?=\S)/g, "Live, ")
-      .replace(/,+/g, ", ")
-      .trim()
-      .replace(/,\s*$/, "");
+
+    // --- Split backup resources by pattern and join with comma+space ---
+    const backupStr = parts.slice(2).join(" ");
+    const resources = backupStr.match(/[A-Z]{2,4}-[A-Z]-Live(?:-[A-Z]{2})?/g) || [];
+    const backups = resources.join(", ");
+
     rows.push([share, primary, backups]);
   }
   return rows;
@@ -332,5 +334,6 @@ function compareTables() {
   }
 }
 </script>
+
 </body>
 </html>
