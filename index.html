@@ -123,15 +123,17 @@
 </head>
 <body>
 <h1>SES Policy Validator 🎈</h1>
+
 <div class="container">
   <div class="input-box" id="box1">
     <h3>Policy Received by Mail 📩</h3>
     <textarea id="data1" placeholder="Paste vertical data here..."></textarea>
     <button onclick="convertToTable(1)">Convert to Table</button>
   </div>
+
   <div class="input-box" id="box2">
     <h3>Updated Conviva Policy 📤</h3>
-    <textarea id="data2" placeholder="Paste tab or space-separated data with headers (Share, Primary, Backup Resource(s))..."></textarea>
+    <textarea id="data2" placeholder="Paste tab or space-separated data..."></textarea>
     <button onclick="convertToTable(2)">Convert to Table</button>
   </div>
 </div>
@@ -168,7 +170,8 @@ function parsePolicy1Data(text) {
   return rows;
 }
 
-// --- Policy Data 2 Parser (with comma-separated backup resources) ---
+
+// --- Policy Data 2 Parser (UPDATED BACKUP FORMAT) ---
 function parsePolicy2Data(text) {
   const lines = text.trim().split(/\r?\n+/).map(v => v.trim()).filter(Boolean);
   if (lines.length === 0) return [];
@@ -178,6 +181,7 @@ function parsePolicy2Data(text) {
   if (/share|primary|backup/i.test(lines[0])) startIndex = 1;
 
   for (let i = startIndex; i < lines.length; i++) {
+
     const parts = lines[i].split(/\t| +/).filter(Boolean);
     if (parts.length < 3) continue;
 
@@ -186,15 +190,23 @@ function parsePolicy2Data(text) {
 
     const primary = parts[1];
 
-    // --- Split backup resources by pattern and join with comma+space ---
-    const backupStr = parts.slice(2).join(" ");
-    const resources = backupStr.match(/[A-Z]{2,4}-[A-Z]-Live(?:-[A-Z]{2})?/g) || [];
-    const backups = resources.join(", ");
+    // ---- FIXED BACKUP PARSER ----
+    const backupParts = parts.slice(2);
+
+    const backups = backupParts
+      .join(" ")                    // join raw
+      .replace(/,/g, "")            // remove weird commas
+      .replace(/([A-Z]{2,}-[A-Z]-Live(?:-IT)?)/g, "$1|")  // mark each resource end
+      .split("|")                   // split by marker
+      .map(v => v.trim())
+      .filter(Boolean)
+      .join(", ");                  // final comma+space formatting
 
     rows.push([share, primary, backups]);
   }
   return rows;
 }
+
 
 // --- Convert to Table ---
 function convertToTable(num) {
@@ -273,6 +285,7 @@ function convertToTable(num) {
   else tableData2 = rows;
 }
 
+
 // --- Normalization Helper ---
 function normalize(value) {
   return (value || "")
@@ -334,6 +347,5 @@ function compareTables() {
   }
 }
 </script>
-
 </body>
 </html>
